@@ -36,10 +36,10 @@ evaluate synchronously, appearing to execute exactly at their target times.
 Callers callers will read the virtual clock rather than the system clock. This
 allows you to write tests for hours of "real-time" behavior which execute deterministically, in milliseconds.
 
-Tea-Time is not for working with dates or human times; it works purely in POSIX
-time. Tea-Time is not a parser or formatter. There's no notion of intervals or
-calendars. These are all admirable goals, better served by Joda Time, Juxt's
-Tick.
+Tea-Time is not for working with dates or human times; it works purely in
+microseconds and the posix timescale. Tea-Time is not a parser or formatter.
+There's no notion of intervals or calendars. These are all admirable goals,
+better served by Joda Time, Juxt's Tick, et al.
 
 ## Installation
 
