@@ -43,7 +43,7 @@ Tick.
 
 ## Installation
 
-Via [Clojars](https://clojars.org/tea-time)
+[![Clojars Project](https://img.shields.io/clojars/v/tea-time.svg)](https://clojars.org/tea-time)
 
 ## Quick Tour
 
