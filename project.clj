@@ -1,4 +1,4 @@
-(defproject tea-time "1.0.0"
+(defproject tea-time "1.0.0-SNAPSHOT"
   :description "A simple, testable scheduler for asynchronous, cancellable, possibly periodic computation."
   :url "https://github.com/aphyr/tea-time"
   :license {:name "Eclipse Public License"
