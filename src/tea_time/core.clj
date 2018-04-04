@@ -203,14 +203,22 @@
   (defer-micros! [this delay]
     (reset! deferred-t (+ (linear-time-micros) delay))))
 
+(defn at-linear-micros!
+  "Calls f at t microseconds on the linear timescale."
+  [t f]
+  (schedule! (Once. (task-id) f t (atom false))))
 
-(defn at!
+(defn at-unix-micros!
+  "Calls f at t microseconds on the unix timescale. We convert this time to the
+  linear timescale, so it may behave oddly across leap seconds."
+  [t f]
+  (at-linear-micros! (unix-micros->linear-micros t) f))
+
+(defn at-unix!
   "Calls f at t seconds on the unix timescale. We convert this time to
   the linear timescale, so it may behave oddly across leap seconds."
   [t f]
-  (schedule! (Once. (task-id) f
-                    (unix-micros->linear-micros (seconds->micros t))
-                    (atom false))))
+  (at-unix-micros! (seconds->micros t) f))
 
 (defn after!
   "Calls f after delay seconds."
@@ -277,24 +285,47 @@
       (warn t "tea-time task threw")))))
 
 (defn stop!
-  "Stops the task threadpool. Waits for threads to exit."
+  "Stops the task threadpool. Waits for threads to exit. Repeated calls to stop
+  are noops."
   []
   (locking threadpool
-    (reset! running false)
-    (while (some #(.isAlive ^Thread %) @threadpool)
-      ; Allow at most 1/10th park-interval to pass after all threads exit.
-      (Thread/sleep (/ park-interval-micros 10000)))
-    (reset! threadpool [])))
+    (when @running
+      (reset! running false)
+      (while (some #(.isAlive ^Thread %) @threadpool)
+        ; Allow at most 1/10th park-interval to pass after all threads exit.
+        (Thread/sleep (/ park-interval-micros 10000)))
+      (reset! threadpool []))))
 
 (defn start!
-  "Starts the threadpool to execute tasks on the queue automatically."
+  "Starts the threadpool to execute tasks on the queue automatically. Repeated
+  calls to start are noops."
   []
   (locking threadpool
-    (stop!)
-    (reset! running true)
-    (reset! threadpool
-            (map (fn [i]
-                   (let [^Runnable f (bound-fn [] (run-tasks! i))]
-                     (doto (Thread. f (str "Tea-Time " i))
-                       (.start))))
-                 (range thread-count)))))
+    (when-not @running
+      (reset! running true)
+      (reset! threadpool
+              (map (fn [i]
+                     (let [^Runnable f (bound-fn [] (run-tasks! i))]
+                       (doto (Thread. f (str "Tea-Time " i))
+                         (.start))))
+                   (range thread-count))))))
+
+(def threadpool-users
+  "Number of callers who would like a threadpool open right now"
+  (atom 0))
+
+(defmacro with-threadpool
+  "Ensures the threadpool is running within `body`, which is evaluated in an
+  implicit `do`. Multiple threads can call with-threadpool
+  concurrently. If any thread is within `with-threadpool`, the pool will run,
+  and when no threads are within `with-threadpool`, the pool will shut down.
+
+  You'll probably put this in the main entry points to your program, so the
+  threadpool runs for the entire life of the program."
+  [& body]
+  `(try (when (= 1 (swap! threadpool-users inc))
+          (start!))
+        ~@body
+        (finally
+          (when (= 0 (swap! threadpool-users dec))
+            (stop!)))))

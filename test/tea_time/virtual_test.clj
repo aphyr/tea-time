@@ -17,9 +17,9 @@
 
 (deftest at-test
          (let [x (atom 0)
-               once1 (at! 1 #(swap! x inc))
-               once2 (at! 2 #(swap! x inc))
-               once3 (at! 3 #(swap! x inc))]
+               once1 (at-unix! 1 #(swap! x inc))
+               once2 (at-unix! 2 #(swap! x inc))
+               once3 (at-unix! 3 #(swap! x inc))]
 
            (advance! 0.5)
            (is (= @x 0))
@@ -27,7 +27,7 @@
            (advance! 2)
            (is (= @x 2))
 
-           (cancel once3)
+           (cancel! once3)
            (advance! 3)
            (is (= @x 2))))
 
@@ -51,13 +51,13 @@
            (is (= @x 3))
 
            ; Double-down
-           (defer task -3)
+           (defer! task -3)
            (is (= @x 3))
            (advance! 5)
            (is (= @x 8))
 
            ; Into the future!
-           (defer task 4)
+           (defer! task 4)
            (advance! 8)
            (is (= @x 8))
            (advance! 9)
