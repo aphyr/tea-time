@@ -274,8 +274,11 @@
               ; we're sleeping 100 microseconds minimum, and aiming to wake up
               ; 1 ms before, so we have a better chance of actually executing
               ; on time.
-              (LockSupport/parkNanos
-                (* 1000 (max 10 (- (:t task) (linear-time-micros) 1000)))))))
+              (->> (- (:t task) (linear-time-micros) 1000)
+                   (max 10)
+                   (min park-interval-micros)
+                   (* 1000)
+                   LockSupport/parkNanos))))
 
         ; No task available; park for a bit and try again.
         (LockSupport/parkNanos (* 1000 park-interval-micros)))
